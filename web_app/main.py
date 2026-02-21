@@ -45,10 +45,12 @@ async def get_video_info(req: VideoRequest):
         'simulate': True,
         'quiet': True,
         'no_warnings': True,
-        'extractor_retries': 3,
-        # Bypass options for Cloud IPs
+        # Bypass options for Cloud IPs (YouTube Bot Detection block)
+        'extractor_args': {
+            'youtube': ['player_client=android,ios,web']
+        },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Fetch-Mode': 'navigate',
         },
@@ -119,9 +121,12 @@ async def download_video(req: VideoRequest):
         'retries': 10,
         'fragment_retries': 10,
         'extractor_retries': 5,
-        # Anti-Bot Bypass
+        # Anti-Bot Bypass (Using Android App signature API instead of vulnerable Web Browser)
+        'extractor_args': {
+            'youtube': ['player_client=android,ios,web']
+        },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Fetch-Mode': 'navigate',
         },
