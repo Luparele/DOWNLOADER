@@ -1,10 +1,10 @@
 const CACHE_NAME = 'downloader-pwa-v1';
 const ASSETS_TO_CACHE = [
     '/',
-    '/static/index.html',
-    '/static/style.css',
-    '/static/script.js',
-    '/static/manifest.json',
+    '/index.html',
+    '/style.css',
+    '/script.js',
+    '/manifest.json',
     'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap'
 ];
 
