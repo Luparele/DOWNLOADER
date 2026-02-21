@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentVideoData = null;
 
     // Define API backend path depending on the environment. 
-    // If it's a web browser, it connects to itself. If it's the Android APK (capacitor/file), it connects to the PC IPv4.
-    const API_BASE = (!window.location.protocol.startsWith('http')) ? 'http://192.168.1.73:8000' : '';
+    // This PWA contacts the Render Cloud Backend API for processing
+    const API_BASE = 'https://downloader-nqdv.onrender.com';
 
     const showError = (msg) => {
         errorMsg.textContent = msg;
