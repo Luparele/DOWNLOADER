@@ -156,15 +156,21 @@ async def download_video(req: VideoRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/api/open-folder")
-async def open_downloads_folder():
-    downloads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Downloads")
-    os.makedirs(downloads_dir, exist_ok=True)
+@app.get("/api/serve-file")
+async def serve_file(path: str):
+    """
+    Streams a file from the server's filesystem to the user's device.
+    """
+    # Security: Ensure we are only serving from the Downloads directory
+    base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Downloads")
+    file_path = os.path.abspath(os.path.join(base_dir, "..", path))
     
-    try:
-        # Since the user is on Windows, we can use os.startfile
-        if os.name == 'nt':
-            os.startfile(downloads_dir)
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta: {str(e)}")
+    if not file_path.startswith(base_dir) or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado ou acesso negado.")
+    
+    filename = os.path.basename(file_path)
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type='application/octet-stream'
+    )

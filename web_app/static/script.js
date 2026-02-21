@@ -126,13 +126,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.detail || "Falha no download");
             }
 
-            downloadStatus.textContent = `Sucesso! Salvo como: ${data.file}`;
+            downloadStatus.textContent = `Sucesso! O vídeo está pronto.`;
             downloadStatus.classList.remove('hidden');
             downloadStatus.style.borderColor = 'rgba(0, 243, 255, 0.3)';
             downloadStatus.style.color = 'var(--secondary)';
             downloadStatus.style.background = 'rgba(0, 243, 255, 0.1)';
 
-            // Show open folder button after success
+            // Set up direct download link
+            openFolderBtn.innerHTML = `<span>Salvar no Dispositivo</span>`;
+            openFolderBtn.onclick = () => {
+                const downloadUrl = `${API_BASE}/api/serve-file?path=${encodeURIComponent(data.file)}`;
+                window.open(downloadUrl, '_blank');
+            };
             openFolderBtn.classList.remove('hidden');
 
         } catch (err) {
@@ -148,12 +153,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add listender for Open Folder button
-    openFolderBtn.addEventListener('click', async () => {
-        try {
-            await fetch(`${API_BASE}/api/open-folder`);
-        } catch (err) {
-            console.error("Erro ao abrir pasta:", err);
-        }
-    });
+    // Listender for folder opening is now handled by onclick in download block
 });
