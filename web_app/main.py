@@ -42,36 +42,36 @@ async def get_video_info(req: VideoRequest):
         'simulate': True,
         'quiet': True,
         'no_warnings': True,
-        # Bypass options for Cloud IPs (YouTube Bot Detection block)
+        # Bypass options for Cloud IPs 
         'extractor_args': {
-            'youtube': ['player_client=android,ios,web']
+            'youtube': ['player_client=android,web']
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Fetch-Mode': 'navigate',
         },
-        'sleep_requests': 1.5,
-        'sleep_interval': 2,
-        'max_sleep_interval': 5,
         'nocheckcertificate': True,
         'socket_timeout': 30,
         'ffmpeg_location': ffmpeg_link,
     }
     
-    # Check for cookies
-    cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    # Check for cookies and list files for debug
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cookies_path = os.path.join(root_dir, "cookies.txt")
     has_cookies = os.path.exists(cookies_path)
+    
+    # Filesystem Diagnostic for Render
+    try:
+        files = os.listdir(root_dir)
+        print(f"DEBUG FS: CurDir: {os.getcwd()} | Root: {root_dir} | Files: {files}")
+    except:
+        pass
+
     print(f"DEBUG INFO: cookies.txt path: {cookies_path} | Exists: {has_cookies}")
     
     if has_cookies:
         ydl_opts['cookiefile'] = cookies_path
-        # When using cookies from a browser, it's safer to match a Desktop UA 
-        # as most people export from their desktop browsers.
-        ydl_opts['http_headers']['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        # Also remove the mobile player clients for YouTube if cookies are present
-        if 'youtube' in req.url.lower():
-            ydl_opts['extractor_args'] = {'youtube': ['player_client=web']}
     elif req.browser and req.browser != "none":
         ydl_opts['cookiesfrombrowser'] = [req.browser]
     
@@ -133,31 +133,28 @@ async def download_video(req: VideoRequest):
         'retries': 10,
         'fragment_retries': 10,
         'extractor_retries': 5,
-        # Anti-Bot Bypass (Using Android App signature API instead of vulnerable Web Browser)
         'extractor_args': {
-            'youtube': ['player_client=android,ios,web']
+            'youtube': ['player_client=android,web']
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Fetch-Mode': 'navigate',
             'Referer': 'https://www.tiktok.com/',
         },
         'socket_timeout': 30,
         'prefer_free_formats': True,
+        'nocheckcertificate': True,
     }
     
     # Check for cookies
-    cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cookies_path = os.path.join(root_dir, "cookies.txt")
     has_cookies = os.path.exists(cookies_path)
     print(f"DEBUG DOWNLOAD: cookies.txt path: {cookies_path} | Exists: {has_cookies}")
     
     if has_cookies:
         ydl_opts['cookiefile'] = cookies_path
-        # Match Desktop UA for cookies
-        ydl_opts['http_headers']['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        if 'youtube' in req.url.lower():
-             ydl_opts['extractor_args'] = {'youtube': ['player_client=web']}
     elif req.browser and req.browser != "none":
         ydl_opts['cookiesfrombrowser'] = [req.browser]
     
