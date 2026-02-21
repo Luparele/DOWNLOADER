@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloader - Futuristic Video Downloader</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#1a0b2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="particles"></div>
+
+    <main class="glass-container">
+        <header>
+            <h1 class="glitch" data-text="Downloader">Downloader</h1>
+            <p class="subtitle">Extração de Mídia Next-Gen</p>
+        </header>
+
+        <section class="input-section">
+            <div class="input-group">
+                <input type="url" id="video-url" placeholder="Cole o link do vídeo aqui..." autocomplete="off">
+                <div class="input-border"></div>
+            </div>
+
+            <div class="input-group" style="margin-top: 15px;">
+                <label for="browser-selector"
+                    style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px; display: block;">Download de
+                    Link Privado? (Ex: IG Story)</label>
+                <select id="browser-selector" class="cyber-select" style="width: 100%;">
+                    <option value="none">Público (Não usar Cookies)</option>
+                    <option value="chrome">Google Chrome</option>
+                    <option value="edge">Microsoft Edge</option>
+                    <option value="firefox">Mozilla Firefox</option>
+                    <option value="opera">Opera</option>
+                    <option value="brave">Brave</option>
+                </select>
+            </div>
+
+            <button id="fetch-btn" class="cyber-button" style="margin-top: 20px;">
+                <span>Analisar Link</span>
+                <div class="loader-ring hidden" id="fetch-loader"></div>
+            </button>
+        </section>
+
+        <div id="error-msg" class="error-msg hidden"></div>
+
+        <section id="results-section" class="results-section hidden">
+            <div class="card">
+                <div class="thumbnail-wrapper">
+                    <img id="video-thumbnail" src="" alt="Thumbnail">
+                    <div class="duration-badge" id="video-duration"></div>
+                    <div class="platform-badge" id="video-platform"></div>
+                </div>
+                <div class="video-info">
+                    <h2 id="video-title">Carregando...</h2>
+                    <div class="quality-wrapper">
+                        <select id="quality-selector" class="cyber-select hidden">
+                            <option value="best">Melhor Qualidade Automática</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="download-btn" class="cyber-button primary">
+                    <span>Iniciar Download</span>
+                    <div class="loader-ring hidden" id="download-loader"></div>
+                </button>
+                <div id="download-status" class="status-msg hidden"></div>
+
+                <button id="open-folder-btn" class="cyber-button secondary hidden">
+                    <span>Abrir Pasta de Downloads</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
