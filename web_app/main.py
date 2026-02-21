@@ -62,8 +62,12 @@ async def get_video_info(req: VideoRequest):
         'socket_timeout': 30,
     }
     
-    if req.browser and req.browser != "none":
+    cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    if os.path.exists(cookies_path):
+        ydl_opts['cookiefile'] = cookies_path
+    elif req.browser and req.browser != "none":
         ydl_opts['cookiesfrombrowser'] = [req.browser]
+    
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             # Provide an empty dict for context or use extract_info directly
@@ -138,7 +142,10 @@ async def download_video(req: VideoRequest):
         'socket_timeout': 30,
     }
     
-    if req.browser and req.browser != "none":
+    cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    if os.path.exists(cookies_path):
+        ydl_opts['cookiefile'] = cookies_path
+    elif req.browser and req.browser != "none":
         ydl_opts['cookiesfrombrowser'] = [req.browser]
     
     try:
