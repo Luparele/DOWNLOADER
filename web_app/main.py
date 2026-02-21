@@ -45,6 +45,19 @@ async def get_video_info(req: VideoRequest):
         'simulate': True,
         'quiet': True,
         'no_warnings': True,
+        'extractor_retries': 3,
+        # Bypass options for Cloud IPs
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Mode': 'navigate',
+        },
+        'sleep_requests': 1.5,
+        'sleep_interval': 2,
+        'max_sleep_interval': 5,
+        'nocheckcertificate': True,
+        'legacyserverconnect': True,
+        'socket_timeout': 30,
     }
     
     if req.browser and req.browser != "none":
@@ -105,6 +118,19 @@ async def download_video(req: VideoRequest):
         'noplaylist': True,
         'retries': 10,
         'fragment_retries': 10,
+        'extractor_retries': 5,
+        # Anti-Bot Bypass
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Mode': 'navigate',
+        },
+        'sleep_requests': 1.5,
+        'sleep_interval': 2,
+        'max_sleep_interval': 5,
+        'nocheckcertificate': True,
+        'legacyserverconnect': True,
+        'socket_timeout': 30,
     }
     
     if req.browser and req.browser != "none":
