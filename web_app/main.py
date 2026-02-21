@@ -11,11 +11,8 @@ import shutil
 import yt_dlp as youtube_dl
 
 # Fix ffmpeg location for yt-dlp to recognize its basename
-ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-ffmpeg_dir = os.path.dirname(os.path.abspath(__file__))
-ffmpeg_link = os.path.join(ffmpeg_dir, "ffmpeg.exe")
-if not os.path.exists(ffmpeg_link):
-    shutil.copy(ffmpeg_exe, ffmpeg_link)
+# imageio-ffmpeg detects the OS (Win/Linux) automatically
+ffmpeg_link = imageio_ffmpeg.get_ffmpeg_exe()
 
 app = FastAPI(title="Futuristic YouTube-DL Web UI")
 
@@ -58,8 +55,8 @@ async def get_video_info(req: VideoRequest):
         'sleep_interval': 2,
         'max_sleep_interval': 5,
         'nocheckcertificate': True,
-        'legacyserverconnect': True,
         'socket_timeout': 30,
+        'ffmpeg_location': ffmpeg_link,
     }
     
     cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
@@ -111,9 +108,10 @@ async def download_video(req: VideoRequest):
     
     # If format_id isn't specified or is empty, fallback to 'best'
     if req.format_id and req.format_id != "best":
-        format_param = f"bestvideo[height<={req.format_id}]+bestaudio/best"
+        # Using a more resilient format string that gracefully falls back
+        format_param = f"bestvideo[height<={req.format_id}][ext=mp4]+bestaudio[ext=m4a]/best[height<={req.format_id}]/best"
     else:
-        format_param = "bestvideo+bestaudio/best"
+        format_param = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best"
     
     # Use %(extractor)s to dynamically create a subfolder with the platform name!
     ydl_opts = {
@@ -137,9 +135,8 @@ async def download_video(req: VideoRequest):
         'sleep_requests': 1.5,
         'sleep_interval': 2,
         'max_sleep_interval': 5,
-        'nocheckcertificate': True,
-        'legacyserverconnect': True,
         'socket_timeout': 30,
+        'prefer_free_formats': True,
     }
     
     cookies_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
