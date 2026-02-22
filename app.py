@@ -80,7 +80,7 @@ def get_info(req: VideoReq):
                 elif has_a: type_tag = "[Audio]"
 
                 formats.append({
-                    "id": f.get('format_id'),
+                    "id": f.get('format_id') or "best",
                     "ext": f.get('ext'),
                     "res": res,
                     "type": type_tag,
@@ -126,7 +126,7 @@ def download(req: VideoReq):
         platform_dir = os.path.join(base_dir, platform)
         if not os.path.exists(platform_dir): os.makedirs(platform_dir)
             
-        if req.format_id and req.format_id != 'best':
+        if req.format_id and req.format_id not in ['best', 'undefined']:
             target_format = f"{req.format_id}+bestaudio/{req.format_id}"
         else:
             target_format = 'best'
