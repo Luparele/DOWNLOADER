@@ -54,6 +54,15 @@ async function promptNativeDownload(fileUrl, fileName) {
 btnInfo.onclick = async () => {
     error.style.display = 'none';
     result.style.display = 'none';
+
+    // Cloud Environment Security Check for Cookies
+    const isCloud = API_BASE !== '';
+    if (isCloud && browserIn.value !== 'none') {
+        alert("🔒 Limitação de Nuvem Detectada:\n\nComo o sistema agora está rodando na Vercel/Render (nas Nuvens), o servidor não tem acesso físico ao seu computador ou celular para ler os cookies locais do Chrome/Edge.\n\nA opção 'Usar Chrome/Edge' só funciona quando você roda o arquivo `app.py` localmente no seu PC. Para vídeos privados na nuvem, use o Padrão.");
+        browserIn.value = 'none';
+        return;
+    }
+
     btnInfo.disabled = true;
     btnInfo.textContent = '...ing';
 
