@@ -33,40 +33,74 @@ btnInfo.onclick = async () => {
             qualitySel.appendChild(opt);
         });
 
-
         result.style.display = 'block';
     } catch (e) {
         error.textContent = e.message;
         error.style.display = 'block';
     } finally {
         btnInfo.disabled = false;
-        btnInfo.textContent = 'Analisar';
+        btnInfo.textContent = 'Analisar Link';
     }
 };
 
 btnDl.onclick = async () => {
     btnDl.disabled = true;
-    btnDl.textContent = 'Baixando...';
+    btnDl.innerHTML = 'Baixando...';
+
+    // UI Elements
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Iniciando extração...';
+
+    const activeUrl = urlIn.value;
+
+    // Start Polling Context
+    let pollInterval = setInterval(async () => {
+        try {
+            const pres = await fetch(`/api/progress?url=${encodeURIComponent(activeUrl)}`);
+            if (pres.ok) {
+                const pdata = await pres.json();
+                let pct = pdata.progress;
+                progressText.textContent = pct;
+
+                // If it looks like a number %, apply to width
+                if (pct.includes('%')) {
+                    progressBar.style.width = pct;
+                }
+            }
+        } catch (e) { console.error('Poll error', e); }
+    }, 500);
+
     try {
         const res = await fetch('/api/download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                url: urlIn.value,
+                url: activeUrl,
                 browser: browserIn.value,
                 format_id: document.getElementById('quality').value
             })
         });
         if (!res.ok) {
             const data = await res.json();
-            throw new Error(data.detail || 'Erro');
+            throw new Error(data.detail || 'Erro ao baixar');
         }
-        alert('Download concluído na pasta Downloads!');
+
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Concluído!';
+        setTimeout(() => alert('Download concluído na pasta Downloads!'), 300);
+
     } catch (e) {
+        progressText.textContent = 'Falhou!';
+        progressBar.style.backgroundColor = 'red';
         alert(e.message);
     } finally {
+        clearInterval(pollInterval);
         btnDl.disabled = false;
-        btnDl.textContent = 'Salvar Mídia';
+        btnDl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Salvar Mídia`;
     }
 };
-

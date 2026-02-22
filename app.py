@@ -5,11 +5,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import imageio_ffmpeg
+import asyncio
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
+# Global dictionary to store download progress per URL
+active_downloads = {}
 
 class VideoReq(BaseModel):
     url: str
@@ -17,11 +21,15 @@ class VideoReq(BaseModel):
     format_id: str = None
 
 @app.get("/")
-async def root():
+def root():
     return FileResponse("static/index.html")
 
+@app.get("/api/progress")
+def get_progress(url: str):
+    return {"progress": active_downloads.get(url, "0%")}
+
 @app.post("/api/info")
-async def get_info(req: VideoReq):
+def get_info(req: VideoReq):
     opts = {
         'simulate': True,
         'nocheckcertificate': True,
@@ -67,9 +75,18 @@ async def get_info(req: VideoReq):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/download")
-async def download(req: VideoReq):
+def download(req: VideoReq):
     print(f"Download request: {req.url} - Selected Format ID: {req.format_id}")
-    
+    ACTIVE_URL = req.url
+    active_downloads[ACTIVE_URL] = "0%"
+
+    def my_hook(d):
+        if d['status'] == 'downloading':
+            # `_percent_str` typically looks like " 45.3%" or "100.0%"
+            active_downloads[ACTIVE_URL] = d.get('_percent_str', '0%').strip()
+        elif d['status'] == 'finished':
+            active_downloads[ACTIVE_URL] = "100%"
+
     opts_info = {
         'simulate': True,
         'nocheckcertificate': True,
@@ -87,9 +104,6 @@ async def download(req: VideoReq):
         platform_dir = os.path.join(base_dir, platform)
         if not os.path.exists(platform_dir): os.makedirs(platform_dir)
             
-        # Refined format selection: 
-        # Try to merge with best audio, otherwise just use the ID.
-        # This prevents falling back to 'best' (which could be 4K).
         if req.format_id and req.format_id != 'best':
             target_format = f"{req.format_id}+bestaudio/{req.format_id}"
         else:
@@ -103,16 +117,21 @@ async def download(req: VideoReq):
             'ffmpeg_location': ffmpeg_exe,
             'nocheckcertificate': True,
             'merge_output_format': 'mp4',
+            'progress_hooks': [my_hook]
         }
         if req.browser != "none":
             opts_dl['cookiesfrombrowser'] = [req.browser]
             
         with youtube_dl.YoutubeDL(opts_dl) as ydl:
             ydl.download([req.url])
+            # Keep it at 100% until frontend resets it or a new active DL starts
+            active_downloads[ACTIVE_URL] = "Concluído!" 
             return {"status": "ok", "platform": platform}
     except Exception as e:
         print(f"Error during download: {str(e)}")
+        active_downloads[ACTIVE_URL] = "Erro!"
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
 
