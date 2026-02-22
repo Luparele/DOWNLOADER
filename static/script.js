@@ -22,6 +22,18 @@ btnInfo.onclick = async () => {
 
         document.getElementById('res-title').textContent = data.title;
         document.getElementById('res-thumb').src = data.thumbnail;
+
+        // Fill Quality Selector
+        const qualitySel = document.getElementById('quality');
+        qualitySel.innerHTML = '';
+        data.formats.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.id;
+            opt.textContent = `${f.type} [${f.ext}] ${f.res} - ${f.note}`;
+            qualitySel.appendChild(opt);
+        });
+
+
         result.style.display = 'block';
     } catch (e) {
         error.textContent = e.message;
@@ -39,7 +51,11 @@ btnDl.onclick = async () => {
         const res = await fetch('/api/download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: urlIn.value, browser: browserIn.value })
+            body: JSON.stringify({
+                url: urlIn.value,
+                browser: browserIn.value,
+                format_id: document.getElementById('quality').value
+            })
         });
         if (!res.ok) {
             const data = await res.json();
@@ -53,3 +69,4 @@ btnDl.onclick = async () => {
         btnDl.textContent = 'Salvar Mídia';
     }
 };
+

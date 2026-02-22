@@ -14,6 +14,7 @@ ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
 class VideoReq(BaseModel):
     url: str
     browser: str = "none"
+    format_id: str = None
 
 @app.get("/")
 async def root():
@@ -32,17 +33,43 @@ async def get_info(req: VideoReq):
     try:
         with youtube_dl.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(req.url, download=False)
+            
+            formats = []
+            for f in info.get('formats', []):
+                # Resolution
+                res = f.get('resolution') or f"{f.get('width')}x{f.get('height')}"
+                if res == "None" or not res: res = "Audio Only"
+                
+                # Check for video and audio
+                has_v = f.get('vcodec') != 'none'
+                has_a = f.get('acodec') != 'none'
+                
+                type_tag = ""
+                if has_v and has_a: type_tag = "[V+A]"
+                elif has_v: type_tag = "[Video]"
+                elif has_a: type_tag = "[Audio]"
+
+                formats.append({
+                    "id": f.get('format_id'),
+                    "ext": f.get('ext'),
+                    "res": res,
+                    "type": type_tag,
+                    "note": f.get('format_note') or ""
+                })
+
             return {
                 "title": info.get('title'),
                 "thumbnail": info.get('thumbnail'),
-                "id": info.get('id')
+                "id": info.get('id'),
+                "formats": formats[::-1]
             }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/download")
 async def download(req: VideoReq):
-    # Setup for initial info extraction to get the platform
+    print(f"Download request: {req.url} - Selected Format ID: {req.format_id}")
+    
     opts_info = {
         'simulate': True,
         'nocheckcertificate': True,
@@ -56,17 +83,26 @@ async def download(req: VideoReq):
             info = ydl.extract_info(req.url, download=False)
             platform = info.get('extractor_key', 'Generic').capitalize()
             
-        # Define and create output directory hierarchy
         base_dir = os.path.join(os.getcwd(), "Downloads")
         platform_dir = os.path.join(base_dir, platform)
-        if not os.path.exists(platform_dir):
-            os.makedirs(platform_dir)
+        if not os.path.exists(platform_dir): os.makedirs(platform_dir)
             
+        # Refined format selection: 
+        # Try to merge with best audio, otherwise just use the ID.
+        # This prevents falling back to 'best' (which could be 4K).
+        if req.format_id and req.format_id != 'best':
+            target_format = f"{req.format_id}+bestaudio/{req.format_id}"
+        else:
+            target_format = 'best'
+
+        print(f"Effective target format for yt-dlp: {target_format}")
+
         opts_dl = {
-            'format': 'best',
+            'format': target_format,
             'outtmpl': os.path.join(platform_dir, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_exe,
             'nocheckcertificate': True,
+            'merge_output_format': 'mp4',
         }
         if req.browser != "none":
             opts_dl['cookiesfrombrowser'] = [req.browser]
@@ -75,5 +111,9 @@ async def download(req: VideoReq):
             ydl.download([req.url])
             return {"status": "ok", "platform": platform}
     except Exception as e:
+        print(f"Error during download: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
 
