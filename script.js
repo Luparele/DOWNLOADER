@@ -10,14 +10,45 @@ const browserIn = document.getElementById('browser');
 const result = document.getElementById('result');
 const error = document.getElementById('error');
 
-// Função auxiliar para forçar o download no navegador
-function promptNativeDownload(fileUrl, fileName) {
+// Função auxiliar para forçar o download no navegador com janela "Salvar Como"
+async function promptNativeDownload(fileUrl, fileName) {
+    try {
+        if (window.showSaveFilePicker) {
+            // Tenta usar a API moderna para pedir o local de salvamento
+            const response = await fetch(fileUrl);
+            const blob = await response.blob();
+
+            const handle = await window.showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{
+                    description: 'Media File',
+                    accept: {
+                        'video/mp4': ['.mp4'],
+                        'audio/mpeg': ['.mp3'],
+                        'video/webm': ['.webm']
+                    }
+                }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return true; // Sucesso com dialogo
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('Erro no showSaveFilePicker:', err);
+        }
+        return false; // Usuário cancelou ou deu erro, não faz o fallback automático
+    }
+
+    // Fallback silencioso (baixa direto na pasta Downloads do navegador) para mobile/safari
     const a = document.createElement('a');
     a.href = fileUrl;
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    return true;
 }
 
 btnInfo.onclick = async () => {
@@ -110,8 +141,14 @@ btnDl.onclick = async () => {
 
         // Trigger file download to user's PC
         const fullUrl = `${API_BASE}${data.url}`;
-        promptNativeDownload(fullUrl, data.filename);
-        setTimeout(() => alert(`O download do arquivo [${data.filename}] iniciou no seu navegador!`), 500);
+        progressText.textContent = 'Aguardando local para salvar...';
+        const saved = await promptNativeDownload(fullUrl, data.filename);
+        if (saved) {
+            progressText.textContent = 'Salvo com sucesso!';
+            setTimeout(() => alert(`O arquivo [${data.filename}] foi salvo no seu computador!`), 500);
+        } else {
+            progressText.textContent = 'Download cancelado pelo usuário.';
+        }
 
     } catch (e) {
         progressText.textContent = 'Falhou!';
@@ -175,8 +212,14 @@ btnMp3.onclick = async () => {
 
         // Trigger file download to user's PC
         const fullUrl = `${API_BASE}${data.url}`;
-        promptNativeDownload(fullUrl, data.filename);
-        setTimeout(() => alert(`O download do áudio [${data.filename}] iniciou no seu navegador!`), 500);
+        progressText.textContent = 'Aguardando local para salvar áudio...';
+        const saved = await promptNativeDownload(fullUrl, data.filename);
+        if (saved) {
+            progressText.textContent = 'Salvo com sucesso!';
+            setTimeout(() => alert(`O áudio [${data.filename}] foi salvo no seu computador!`), 500);
+        } else {
+            progressText.textContent = 'Download cancelado pelo usuário.';
+        }
 
     } catch (e) {
         progressText.textContent = 'Falhou!';
