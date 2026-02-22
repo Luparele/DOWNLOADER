@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>YT-DL Raw Web</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div id="app">
+        <h1>YouTube-DL Raw UI</h1>
+        <div class="form">
+            <input type="text" id="url" placeholder="URL do vídeo">
+            <select id="browser">
+                <option value="none">Sem Cookies</option>
+                <option value="chrome">Chrome</option>
+                <option value="edge">Edge</option>
+            </select>
+            <button id="btn-info">Analisar</button>
+        </div>
+
+        <div id="error" style="color:red; display:none;"></div>
+
+        <div id="result" style="display:none; margin-top:20px;">
+            <h3 id="res-title"></h3>
+            <img id="res-thumb" src="" style="width:300px; display:block; margin: 10px 0;">
+            <button id="btn-dl">Salvar Mídia</button>
+        </div>
+    </div>
+    <script src="/static/script.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+imageio-ffmpeg
+a2wsgi
+pycryptodome
+yt-dlp
+
