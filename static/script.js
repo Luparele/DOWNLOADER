@@ -1,7 +1,7 @@
 // Configuração da URL Base da API (Mude a 'URL_DO_RENDER_AQUI' quando hospedar o backend)
 const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
     ? ''
-    : 'URL_DO_RENDER_AQUI';
+    : 'https://downloader-nqdv.onrender.com';
 
 const btnInfo = document.getElementById('btn-info');
 const btnDl = document.getElementById('btn-dl');
