@@ -1,40 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
-    <title>YT-DL Raw Web</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOWNLOADER</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <div id="app">
-        <h1>YouTube-DL Raw UI</h1>
-        <div class="form">
-            <input type="text" id="url" placeholder="URL do vídeo">
-            <select id="browser">
-                <option value="none">Sem Cookies</option>
-                <option value="chrome">Chrome</option>
-                <option value="edge">Edge</option>
-            </select>
-            <button id="btn-info">Analisar</button>
-        </div>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
 
-        <div id="error" style="color:red; display:none;"></div>
+    <main id="app" class="glass-panel">
+        <header>
+            <h1>DOWNLOADER</h1>
+            <p class="subtitle">Fast & Direct Media Extraction</p>
+        </header>
 
-        <div id="result" style="display:none; margin-top:20px;">
-            <h3 id="res-title"></h3>
-            <img id="res-thumb" src="" style="width:300px; display:block; margin: 10px 0;">
+        <section class="input-section">
+            <div class="input-group">
+                <input type="url" id="url" placeholder="Cole o link do vídeo aqui..." autocomplete="off">
+                <div class="select-wrapper">
+                    <select id="browser">
+                        <option value="none">Padrão</option>
+                        <option value="chrome">Chrome</option>
+                        <option value="edge">Edge</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btn-info" class="primary-btn">Analisar Link</button>
+        </section>
 
-            <div style="margin: 10px 0;">
-                <label>Qualidade:</label>
-                <select id="quality"></select>
+        <div id="error" class="alert error-alert" style="display:none;"></div>
+
+        <section id="result" class="result-section" style="display:none;">
+            <div class="media-preview">
+                <img id="res-thumb" src="" alt="Thumbnail do Vídeo">
+                <div class="media-info">
+                    <h3 id="res-title"></h3>
+                </div>
             </div>
 
-            <button id="btn-dl">Salvar Mídia</button>
-        </div>
+            <div class="download-options">
+                <label for="quality">Selecione a Qualidade:</label>
+                <div class="select-wrapper full-width">
+                    <select id="quality"></select>
+                </div>
+                <button id="btn-dl" class="success-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round"
+                        style="margin-right: 5px; vertical-align: middle;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Salvar Mídia
+                </button>
+            </div>
+        </section>
+    </main>
 
-    </div>
-    <script src="/static/script.js?v=2"></script>
+    <script src="/static/script.js?v=4"></script>
 </body>
 
 </html>
