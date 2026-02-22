@@ -227,6 +227,19 @@ button:disabled {
     box-shadow: 0 10px 20px -10px var(--success);
 }
 
+.secondary-btn {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--panel-border);
+    width: 100%;
+}
+
+.secondary-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
 /* Alerts */
 .alert {
     padding: 15px;

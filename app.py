@@ -132,6 +132,60 @@ def download(req: VideoReq):
         active_downloads[ACTIVE_URL] = "Erro!"
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/download_mp3")
+def download_mp3(req: VideoReq):
+    print(f"MP3 Download request: {req.url}")
+    ACTIVE_URL = req.url
+    active_downloads[ACTIVE_URL] = "0%"
+
+    def my_hook(d):
+        if d['status'] == 'downloading':
+            active_downloads[ACTIVE_URL] = d.get('_percent_str', '0%').strip()
+        elif d['status'] == 'finished':
+            active_downloads[ACTIVE_URL] = "Convertendo (MP3)..."
+
+    opts_info = {
+        'simulate': True,
+        'nocheckcertificate': True,
+        'ffmpeg_location': ffmpeg_exe,
+    }
+    if req.browser != "none":
+        opts_info['cookiesfrombrowser'] = [req.browser]
+    
+    try:
+        with youtube_dl.YoutubeDL(opts_info) as ydl:
+            info = ydl.extract_info(req.url, download=False)
+            platform = info.get('extractor_key', 'Generic').capitalize()
+            
+        base_dir = os.path.join(os.getcwd(), "Downloads")
+        platform_dir = os.path.join(base_dir, platform)
+        if not os.path.exists(platform_dir): os.makedirs(platform_dir)
+
+        opts_dl = {
+            'format': 'bestaudio/best',
+            'outtmpl': os.path.join(platform_dir, '%(title)s.%(ext)s'),
+            'ffmpeg_location': ffmpeg_exe,
+            'nocheckcertificate': True,
+            'progress_hooks': [my_hook],
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        }
+        if req.browser != "none":
+            opts_dl['cookiesfrombrowser'] = [req.browser]
+            
+        with youtube_dl.YoutubeDL(opts_dl) as ydl:
+            ydl.download([req.url])
+            active_downloads[ACTIVE_URL] = "Concluído (MP3)!" 
+            return {"status": "ok", "platform": platform}
+    except Exception as e:
+        print(f"Error during MP3 download: {str(e)}")
+        active_downloads[ACTIVE_URL] = "Erro!"
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 
 
 
