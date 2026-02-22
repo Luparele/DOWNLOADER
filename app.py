@@ -25,8 +25,11 @@ base_downloads_dir = os.path.join(os.getcwd(), "Downloads")
 if not os.path.exists(base_downloads_dir):
     os.makedirs(base_downloads_dir)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/downloads", StaticFiles(directory="Downloads"), name="downloads")
+
+@app.get("/")
+def home():
+    return FileResponse("index.html")
 
 ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
 
