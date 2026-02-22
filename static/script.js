@@ -1,9 +1,24 @@
+// Configuração da URL Base da API (Mude a 'URL_DO_RENDER_AQUI' quando hospedar o backend)
+const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+    ? ''
+    : 'URL_DO_RENDER_AQUI';
+
 const btnInfo = document.getElementById('btn-info');
 const btnDl = document.getElementById('btn-dl');
 const urlIn = document.getElementById('url');
 const browserIn = document.getElementById('browser');
 const result = document.getElementById('result');
 const error = document.getElementById('error');
+
+// Função auxiliar para forçar o download no navegador
+function promptNativeDownload(fileUrl, fileName) {
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
 
 btnInfo.onclick = async () => {
     error.style.display = 'none';
@@ -12,7 +27,7 @@ btnInfo.onclick = async () => {
     btnInfo.textContent = '...ing';
 
     try {
-        const res = await fetch('/api/info', {
+        const res = await fetch(`${API_BASE}/api/info`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: urlIn.value, browser: browserIn.value })
@@ -61,7 +76,7 @@ btnDl.onclick = async () => {
     // Start Polling Context
     let pollInterval = setInterval(async () => {
         try {
-            const pres = await fetch(`/api/progress?url=${encodeURIComponent(activeUrl)}`);
+            const pres = await fetch(`${API_BASE}/api/progress?url=${encodeURIComponent(activeUrl)}`);
             if (pres.ok) {
                 const pdata = await pres.json();
                 let pct = pdata.progress;
@@ -76,7 +91,7 @@ btnDl.onclick = async () => {
     }, 500);
 
     try {
-        const res = await fetch('/api/download', {
+        const res = await fetch(`${API_BASE}/api/download`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -85,14 +100,18 @@ btnDl.onclick = async () => {
                 format_id: document.getElementById('quality').value
             })
         });
+        const data = await res.json();
         if (!res.ok) {
-            const data = await res.json();
             throw new Error(data.detail || 'Erro ao baixar');
         }
 
         progressBar.style.width = '100%';
-        progressText.textContent = 'Concluído!';
-        setTimeout(() => alert('Download concluído na pasta Downloads!'), 300);
+        progressText.textContent = 'Entregando arquivo...';
+
+        // Trigger file download to user's PC
+        const fullUrl = `${API_BASE}${data.url}`;
+        promptNativeDownload(fullUrl, data.filename);
+        setTimeout(() => alert(`O download do arquivo [${data.filename}] iniciou no seu navegador!`), 500);
 
     } catch (e) {
         progressText.textContent = 'Falhou!';
@@ -125,7 +144,7 @@ btnMp3.onclick = async () => {
     // Start Polling Context
     let pollInterval = setInterval(async () => {
         try {
-            const pres = await fetch(`/api/progress?url=${encodeURIComponent(activeUrl)}`);
+            const pres = await fetch(`${API_BASE}/api/progress?url=${encodeURIComponent(activeUrl)}`);
             if (pres.ok) {
                 const pdata = await pres.json();
                 let pct = pdata.progress;
@@ -138,7 +157,7 @@ btnMp3.onclick = async () => {
     }, 500);
 
     try {
-        const res = await fetch('/api/download_mp3', {
+        const res = await fetch(`${API_BASE}/api/download_mp3`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -146,14 +165,18 @@ btnMp3.onclick = async () => {
                 browser: browserIn.value
             })
         });
+        const data = await res.json();
         if (!res.ok) {
-            const data = await res.json();
             throw new Error(data.detail || 'Erro ao converter MP3');
         }
 
         progressBar.style.width = '100%';
-        progressText.textContent = 'Concluído (MP3)!';
-        setTimeout(() => alert('Áudio convertido e salvo na pasta Downloads!'), 300);
+        progressText.textContent = 'Entregando áudio...';
+
+        // Trigger file download to user's PC
+        const fullUrl = `${API_BASE}${data.url}`;
+        promptNativeDownload(fullUrl, data.filename);
+        setTimeout(() => alert(`O download do áudio [${data.filename}] iniciou no seu navegador!`), 500);
 
     } catch (e) {
         progressText.textContent = 'Falhou!';

@@ -1,16 +1,35 @@
 import os
-import yt_dlp as youtube_dl
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import imageio_ffmpeg
 import asyncio
+import yt_dlp as youtube_dl
+import urllib.parse
 
 app = FastAPI()
+
+# Configuração CORS para permitir que o frontend na Vercel chame este backend no Render
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção, você pode colocar ["https://seu-front.vercel.app"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Garantir que a pasta Downloads exista antes de montar
+base_downloads_dir = os.path.join(os.getcwd(), "Downloads")
+if not os.path.exists(base_downloads_dir):
+    os.makedirs(base_downloads_dir)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/downloads", StaticFiles(directory="Downloads"), name="downloads")
 
 ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
 
 # Global dictionary to store download progress per URL
 active_downloads = {}
@@ -123,10 +142,18 @@ def download(req: VideoReq):
             opts_dl['cookiesfrombrowser'] = [req.browser]
             
         with youtube_dl.YoutubeDL(opts_dl) as ydl:
-            ydl.download([req.url])
+            res = ydl.extract_info(req.url, download=True)
+            original_filepath = ydl.prepare_filename(res)
+            base_name = os.path.splitext(os.path.basename(original_filepath))[0]
+            final_filename = f"{base_name}.mp4"
+            
+            # URL encode paths for safe web transit
+            encoded_name = urllib.parse.quote(final_filename)
+            file_url = f"/downloads/{platform}/{encoded_name}"
+            
             # Keep it at 100% until frontend resets it or a new active DL starts
             active_downloads[ACTIVE_URL] = "Concluído!" 
-            return {"status": "ok", "platform": platform}
+            return {"status": "ok", "platform": platform, "url": file_url, "filename": final_filename}
     except Exception as e:
         print(f"Error during download: {str(e)}")
         active_downloads[ACTIVE_URL] = "Erro!"
@@ -177,9 +204,16 @@ def download_mp3(req: VideoReq):
             opts_dl['cookiesfrombrowser'] = [req.browser]
             
         with youtube_dl.YoutubeDL(opts_dl) as ydl:
-            ydl.download([req.url])
+            res = ydl.extract_info(req.url, download=True)
+            original_filepath = ydl.prepare_filename(res)
+            base_name = os.path.splitext(os.path.basename(original_filepath))[0]
+            final_filename = f"{base_name}.mp3"
+            
+            encoded_name = urllib.parse.quote(final_filename)
+            file_url = f"/downloads/{platform}/{encoded_name}"
+
             active_downloads[ACTIVE_URL] = "Concluído (MP3)!" 
-            return {"status": "ok", "platform": platform}
+            return {"status": "ok", "platform": platform, "url": file_url, "filename": final_filename}
     except Exception as e:
         print(f"Error during MP3 download: {str(e)}")
         active_downloads[ACTIVE_URL] = "Erro!"
