@@ -80,6 +80,18 @@
                     <span>Iniciar Download</span>
                     <div class="loader-ring hidden" id="download-loader"></div>
                 </button>
+                
+                <div id="progress-container" class="hidden" style="margin-top: 15px; text-align: left; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                        <span id="progress-text">Preparando...</span>
+                        <span id="progress-speed">-- MiB/s</span>
+                    </div>
+                    <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 5px;">
+                        <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;" id="progress-eta">ETA --:--</div>
+                </div>
+
                 <div id="download-status" class="status-msg hidden"></div>
 
                 <button id="open-folder-btn" class="cyber-button secondary hidden">

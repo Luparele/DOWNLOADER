@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentVideoData = null;
 
     // Define API backend path depending on the environment. 
-    // This PWA contacts the Render Cloud Backend API for processing
-    const API_BASE = 'https://downloader-nqdv.onrender.com';
+    // Uses relative path so it works locally and in production.
+    const API_BASE = '';
 
     const showError = (msg) => {
         errorMsg.textContent = msg;
@@ -123,20 +123,67 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.detail || "Falha no download");
+                throw new Error(data.detail || "Falha ao iniciar download");
             }
 
+            const taskId = data.task_id;
+            const progressContainer = document.getElementById('progress-container');
+            const progressText = document.getElementById('progress-text');
+            const progressSpeed = document.getElementById('progress-speed');
+            const progressBarFill = document.getElementById('progress-bar-fill');
+            const progressEta = document.getElementById('progress-eta');
+            
+            progressContainer.classList.remove('hidden');
+            
+            let downloadComplete = false;
+            let finalData = null;
+            
+            // Poll for progress updates
+            while (!downloadComplete) {
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const progRes = await fetch(`${API_BASE}/api/progress/${taskId}`);
+                if (!progRes.ok) continue;
+                
+                const progData = await progRes.json();
+                
+                if (progData.status === 'error') {
+                    throw new Error(progData.error || "Ocorreu um erro no servidor durante o download");
+                }
+                
+                if (progData.status === 'downloading') {
+                    progressText.textContent = `[download] ${progData.percent}`;
+                    progressSpeed.textContent = progData.speed;
+                    progressEta.textContent = `ETA ${progData.eta}`;
+                    if (progData.percent) {
+                        progressBarFill.style.width = progData.percent;
+                    }
+                } else if (progData.status === 'processing') {
+                    progressText.textContent = `Processando arquivo final (isso pode demorar).../`;
+                    progressSpeed.textContent = '';
+                    progressEta.textContent = 'Mesclando áudio e vídeo...';
+                    progressBarFill.style.width = '100%';
+                } else if (progData.status === 'success') {
+                    downloadComplete = true;
+                    finalData = progData;
+                }
+            }
+
+            progressContainer.classList.add('hidden');
             downloadStatus.textContent = `Sucesso! O vídeo está pronto.`;
             downloadStatus.classList.remove('hidden');
             downloadStatus.style.borderColor = 'rgba(0, 243, 255, 0.3)';
             downloadStatus.style.color = 'var(--secondary)';
             downloadStatus.style.background = 'rgba(0, 243, 255, 0.1)';
 
-            // Set up direct download link
-            openFolderBtn.innerHTML = `<span>Salvar no Dispositivo</span>`;
-            openFolderBtn.onclick = () => {
-                const downloadUrl = `${API_BASE}/api/serve-file?path=${encodeURIComponent(data.file)}`;
-                window.open(downloadUrl, '_blank');
+            // Set up open folder button
+            openFolderBtn.innerHTML = `<span>Abrir a pasta do arquivo</span>`;
+            openFolderBtn.onclick = async () => {
+                try {
+                    await fetch(`${API_BASE}/api/open-folder?path=${encodeURIComponent(finalData.file)}`);
+                } catch (e) {
+                    console.error("Erro ao abrir pasta:", e);
+                }
             };
             openFolderBtn.classList.remove('hidden');
 

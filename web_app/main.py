@@ -1,5 +1,7 @@
 import sys
 import os
+import uuid
+import threading
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -10,9 +12,21 @@ import shutil
 
 import yt_dlp as youtube_dl
 
+if getattr(sys, 'frozen', False):
+    # PyInstaller uses _MEIPASS for bundled files
+    BASE_DIR = sys._MEIPASS
+    # EXEC_DIR is where the executable is physically located
+    EXEC_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    EXEC_DIR = BASE_DIR
+
 # Fix ffmpeg location for yt-dlp to recognize its basename
-# imageio-ffmpeg detects the OS (Win/Linux) automatically
-ffmpeg_link = imageio_ffmpeg.get_ffmpeg_exe()
+if os.path.exists(os.path.join(EXEC_DIR, "ffmpeg.exe")):
+    ffmpeg_link = os.path.join(EXEC_DIR, "ffmpeg.exe")
+else:
+    import imageio_ffmpeg
+    ffmpeg_link = imageio_ffmpeg.get_ffmpeg_exe()
 
 app = FastAPI(title="Futuristic YouTube-DL Web UI")
 
@@ -24,20 +38,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="web_app/static"), name="static")
+# The static files mount is moved to the end of the file so it doesn't shadow API routes
 
 class VideoRequest(BaseModel):
     url: str
     format_id: str = "best"
     browser: str = "none"
 
-@app.get("/")
-async def root():
-    return FileResponse("web_app/static/index.html")
+
 
 @app.post("/api/info")
-async def get_video_info(req: VideoRequest):
+def get_video_info(req: VideoRequest):
     ydl_opts = {
         'simulate': True,
         'quiet': True,
@@ -56,15 +67,13 @@ async def get_video_info(req: VideoRequest):
         'ffmpeg_location': ffmpeg_link,
     }
     
-    # Check for cookies and list files for debug
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cookies_path = os.path.join(root_dir, "cookies.txt")
+    cookies_path = os.path.join(EXEC_DIR, "cookies.txt")
     has_cookies = os.path.exists(cookies_path)
     
     # Filesystem Diagnostic for Render
     try:
-        files = os.listdir(root_dir)
-        print(f"DEBUG FS: CurDir: {os.getcwd()} | Root: {root_dir} | Files: {files}")
+        files = os.listdir(EXEC_DIR)
+        print(f"DEBUG FS: CurDir: {os.getcwd()} | Root: {EXEC_DIR} | Files: {files}")
     except:
         pass
 
@@ -110,20 +119,49 @@ async def get_video_info(req: VideoRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+DOWNLOAD_TASKS = {}
+
 @app.post("/api/download")
-async def download_video(req: VideoRequest):
+async def start_download(req: VideoRequest):
+    task_id = str(uuid.uuid4())
+    DOWNLOAD_TASKS[task_id] = {
+        "status": "starting",
+        "percent": "0%",
+        "speed": "",
+        "eta": "",
+        "file": None,
+        "error": None
+    }
+    
+    # Start thread
+    threading.Thread(target=run_download_task, args=(task_id, req)).start()
+    return {"status": "started", "task_id": task_id}
+
+def run_download_task(task_id: str, req: VideoRequest):
     # Ensure Base Downloads directory exists
-    downloads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Downloads")
+    downloads_dir = os.path.join(EXEC_DIR, "Downloads")
     os.makedirs(downloads_dir, exist_ok=True)
     
-    # If format_id isn't specified or is empty, fallback to 'best'
     if req.format_id and req.format_id != "best":
-        # Simplified and more resilient format string
         format_param = f"bestvideo[height<={req.format_id}]+bestaudio/best[height<={req.format_id}]/best"
     else:
         format_param = "bestvideo+bestaudio/best"
-    
-    # Use %(extractor)s to dynamically create a subfolder with the platform name!
+        
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            DOWNLOAD_TASKS[task_id].update({
+                "status": "downloading",
+                "percent": d.get('_percent_str', '').strip(),
+                "speed": d.get('_speed_str', '').strip(),
+                "eta": d.get('_eta_str', '').strip()
+            })
+        elif d['status'] == 'finished':
+            DOWNLOAD_TASKS[task_id].update({
+                "status": "processing",
+                "percent": "100%",
+                "eta": "00:00"
+            })
+            
     ydl_opts = {
         'outtmpl': os.path.join(downloads_dir, '%(extractor)s', '%(title)s.%(ext)s'),
         'format': format_param,
@@ -133,9 +171,7 @@ async def download_video(req: VideoRequest):
         'retries': 10,
         'fragment_retries': 10,
         'extractor_retries': 5,
-        'extractor_args': {
-            'youtube': ['player_client=android,web']
-        },
+        'extractor_args': {'youtube': ['player_client=android,web']},
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -145,29 +181,39 @@ async def download_video(req: VideoRequest):
         'socket_timeout': 30,
         'prefer_free_formats': True,
         'nocheckcertificate': True,
+        'progress_hooks': [progress_hook]
     }
     
-    # Check for cookies
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cookies_path = os.path.join(root_dir, "cookies.txt")
-    has_cookies = os.path.exists(cookies_path)
-    print(f"DEBUG DOWNLOAD: cookies.txt path: {cookies_path} | Exists: {has_cookies}")
-    
-    if has_cookies:
+    cookies_path = os.path.join(EXEC_DIR, "cookies.txt")
+    if os.path.exists(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     elif req.browser and req.browser != "none":
         ydl_opts['cookiesfrombrowser'] = [req.browser]
-    
+
     try:
-        # In a real app we'd want this to be background task or async, but 
-        # since youtube-dl is blocking, let's keep it simple for MVP
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(req.url, download=True)
             platform = info.get('extractor', 'unknown')
-            file_name = f"{info.get('title')}.{info.get('ext', 'mp4')}"
-            return {"status": "success", "file": f"Downloads/{platform}/{file_name}"}
+            generated_path = ydl.prepare_filename(info)
+            sanitized_name = os.path.basename(generated_path)
+            final_name = f"{os.path.splitext(sanitized_name)[0]}.{info.get('ext', 'mp4')}"
+            
+            DOWNLOAD_TASKS[task_id].update({
+                "status": "success",
+                "file": f"Downloads/{platform}/{final_name}"
+            })
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        DOWNLOAD_TASKS[task_id].update({
+            "status": "error",
+            "error": str(e)
+        })
+
+@app.get("/api/progress/{task_id}")
+async def get_progress(task_id: str):
+    task = DOWNLOAD_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task_id não encontrado.")
+    return task
 
 @app.get("/api/serve-file")
 async def serve_file(path: str):
@@ -175,7 +221,7 @@ async def serve_file(path: str):
     Streams a file from the server's filesystem to the user's device.
     """
     # Security: Ensure we are only serving from the Downloads directory
-    base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Downloads")
+    base_dir = os.path.join(EXEC_DIR, "Downloads")
     file_path = os.path.abspath(os.path.join(base_dir, "..", path))
     
     if not file_path.startswith(base_dir) or not os.path.exists(file_path):
@@ -187,3 +233,33 @@ async def serve_file(path: str):
         filename=filename,
         media_type='application/octet-stream'
     )
+
+@app.get("/api/open-folder")
+async def open_folder(path: str):
+    """
+    Opens the directory containing the requested file on the server's local machine.
+    """
+    base_dir = os.path.join(EXEC_DIR, "Downloads")
+    file_path = os.path.abspath(os.path.join(base_dir, "..", path))
+    
+    if not file_path.startswith(base_dir) or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado ou acesso negado.")
+    
+    folder_path = os.path.dirname(file_path)
+    try:
+        if os.name == 'nt':
+            os.startfile(folder_path)
+        elif sys.platform == 'darwin':
+            import subprocess
+            subprocess.Popen(['open', folder_path])
+        else:
+            import subprocess
+            subprocess.Popen(['xdg-open', folder_path])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    return {"status": "success"}
+
+# Mount static files at the root, but do it last so it doesn't override /api routes
+static_dir = os.path.join(BASE_DIR, "web_app", "static")
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
